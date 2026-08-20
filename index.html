@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aktivasi Kartu Rating</title>
+
+  <!-- Firebase SDK (CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f0f4fa;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      padding: 35px 30px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 22px;
+      color: #1a2b4a;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: #6b7a8f;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .card-id-badge {
+      display: inline-block;
+      background: #eef2f7;
+      padding: 6px 18px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a2b4a;
+      margin-bottom: 20px;
+    }
+    .status-box {
+      padding: 16px;
+      border-radius: 12px;
+      margin: 15px 0 20px;
+      font-size: 15px;
+    }
+    .status-active {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #b8e0c4;
+    }
+    .status-inactive {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #f7e7b4;
+    }
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status-loading {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+    label {
+      display: block;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      color: #2d3a4a;
+      margin: 15px 0 5px;
+    }
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #dce2ec;
+      border-radius: 12px;
+      font-size: 15px;
+      transition: 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #2a6df4;
+      box-shadow: 0 0 0 3px rgba(42,109,244,0.15);
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 18px;
+    }
+    .btn-primary {
+      background: #2a6df4;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1a5bd4;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(42,109,244,0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-success {
+      background: #22b573;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #1a9a62;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    .info-text {
+      font-size: 13px;
+      color: #6b7a8f;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid #2a6df4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .footer {
+      margin-top: 25px;
+      font-size: 12px;
+      color: #a0aec0;
+    }
+    .success-icon {
+      font-size: 56px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <div class="logo">📇</div>
+  <h1>Rating Kartu</h1>
+  <div class="subtitle">Aktivasi & Ulasan Google Maps</div>
+
+  <!-- ID Kartu -->
+  <div class="card-id-badge" id="cardIdDisplay">🆔 Kartu: <span id="cardIdValue">---</span></div>
+
+  <!-- Status Box -->
+  <div id="statusBox" class="status-box status-loading">
+    <span id="statusText">⏳ Memuat data kartu...</span>
+  </div>
+
+  <!-- FORM AKTIVASI (muncul jika kartu belum aktif) -->
+  <div id="activationForm" class="hidden">
+    <label for="googleLinkInput">🔗 Link Google Maps Toko</label>
+    <input type="url" id="googleLinkInput" placeholder="https://maps.google.com/..." />
+    <button class="btn btn-primary" id="activateBtn">✅ Aktivasi Kartu</button>
+    <div class="info-text">Masukkan link Google Maps toko/cafe untuk mengaktifkan kartu ini.</div>
+  </div>
+
+  <!-- TOMBOL KE GOOGLE MAPS (muncul jika kartu sudah aktif) -->
+  <div id="goToMapsSection" class="hidden">
+    <div class="success-icon">⭐</div>
+    <p style="font-size:16px; color:#1a2b4a; font-weight:600;">Kartu sudah aktif!</p>
+    <button class="btn btn-success" id="goToMapsBtn">📍 Buka Google Maps & Beri Rating</button>
+    <div class="info-text">Kamu akan diarahkan ke halaman ulasan toko ini.</div>
+  </div>
+
+  <!-- Tombol Coba Lagi jika error -->
+  <button class="btn btn-danger hidden" id="retryBtn">🔄 Coba Lagi</button>
+
+  <div class="footer">© 2026 RatingKartu • Powered by Firebase</div>
+</div>
+
+<!-- Tambahkan Auth SDK di bagian CDN (jika belum ada) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    
+<script>
+  // ---------- KONFIGURASI FIREBASE ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyAgC4kkAocVrn4A2HcFiBQ8zCPcg47VOMg",
+    authDomain: "review-ratting-shop.firebaseapp.com",
+    projectId: "review-ratting-shop",
+    storageBucket: "review-ratting-shop.firebasestorage.app",
+    messagingSenderId: "190983728666",
+    appId: "1:190983728666:web:4f070250626f322145eba3",
+    measurementId: "G-5GYP236RS5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+    // Di bagian JavaScript, setelah firebase.initializeApp
+const auth = firebase.auth();
+
+// Login anonim sebelum akses Firestore
+auth.signInAnonymously()
+  .then(() => {
+    console.log('Login anonim berhasil');
+    checkCard(); // panggil fungsi utama setelah login
+  })
+  .catch((error) => {
+    console.error('Gagal login anonim:', error);
+    setStatus('error', '❌ Gagal autentikasi. ' + error.message);
+    showElement(retryBtn);
+  });
+  const db = firebase.firestore();
+
+  // ---------- DOM ELEMENTS ----------
+  const cardIdValue = document.getElementById('cardIdValue');
+  const statusBox = document.getElementById('statusBox');
+  const statusText = document.getElementById('statusText');
+  const activationForm = document.getElementById('activationForm');
+  const googleLinkInput = document.getElementById('googleLinkInput');
+  const activateBtn = document.getElementById('activateBtn');
+  const goToMapsSection = document.getElementById('goToMapsSection');
+  const goToMapsBtn = document.getElementById('goToMapsBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const cardIdDisplay = document.getElementById('cardIdDisplay');
+
+  // ---------- AMBIL ID DARI URL ----------
+  function getCardIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('id');
+  }
+
+  const cardId = getCardIdFromUrl();
+
+  // ---------- TAMPILKAN STATUS DI UI ----------
+  function setStatus(type, message) {
+    statusBox.className = 'status-box status-' + type;
+    statusText.innerHTML = message;
+  }
+
+  function showElement(el) {
+    el.classList.remove('hidden');
+  }
+
+  function hideElement(el) {
+    el.classList.add('hidden');
+  }
+
+  // ---------- FUNGSI UTAMA: CEK KARTU ----------
+  function checkCard() {
+    // Reset UI
+    hideElement(activationForm);
+    hideElement(goToMapsSection);
+    hideElement(retryBtn);
+    setStatus('loading', '⏳ Memuat data kartu...');
+
+    if (!cardId) {
+      setStatus('error', '❌ ID Kartu tidak ditemukan di URL.');
+      showElement(retryBtn);
+      return;
+    }
+
+    cardIdValue.textContent = cardId;
+
+    // Ambil data dari Firestore
+    db.collection('cards').doc(cardId).get()
+      .then((doc) => {
+        if (!doc.exists) {
+          setStatus('error', '❌ Kartu dengan ID ' + cardId + ' tidak terdaftar.');
+          showElement(retryBtn);
+          return;
+        }
+
+        const data = doc.data();
+        console.log('Data kartu:', data);
+
+        if (data.activated === true && data.googleLink && data.googleLink !== '') {
+          // KARTU SUDAH AKTIF
+          setStatus('active', '✅ Kartu aktif! Arahkan ke Google Maps.');
+          showElement(goToMapsSection);
+          goToMapsBtn.onclick = function() {
+            window.location.href = data.googleLink;
+          };
+        } else {
+          // KARTU BELUM AKTIF
+          setStatus('inactive', '⚠️ Kartu belum diaktivasi. Masukkan link Google Maps di bawah.');
+          showElement(activationForm);
+          // Kosongkan input
+          googleLinkInput.value = '';
+          activateBtn.disabled = false;
+          activateBtn.textContent = '✅ Aktivasi Kartu';
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        setStatus('error', '❌ Gagal terhubung ke database. ' + error.message);
+        showElement(retryBtn);
+      });
+  }
+
+  // ---------- FUNGSI AKTIVASI KARTU ----------
+  function activateCard() {
+    const link = googleLinkInput.value.trim();
+
+    if (!link) {
+      alert('⚠️ Harap masukkan link Google Maps toko.');
+      return;
+    }
+
+    if (!link.startsWith('http://') && !link.startsWith('https://')) {
+      alert('⚠️ Link harus diawali dengan http:// atau https://');
+      return;
+    }
+
+    // Validasi sederhana: cek apakah link mengandung google.com atau maps
+    if (!link.includes('google.com') && !link.includes('goo.gl') && !link.includes('maps')) {
+      if (!confirm('Link ini terlihat bukan dari Google Maps. Lanjutkan?')) {
+        return;
+      }
+    }
+
+    activateBtn.disabled = true;
+    activateBtn.textContent = '⏳ Menyimpan...';
+    setStatus('loading', '⏳ Menyimpan data...');
+
+    // Update data di Firestore
+    db.collection('cards').doc(cardId).update({
+      googleLink: link,
+      activated: true
+    })
+    .then(() => {
+      setStatus('active', '✅ Aktivasi berhasil! Kartu siap digunakan.');
+      hideElement(activationForm);
+      showElement(goToMapsSection);
+      goToMapsBtn.onclick = function() {
+        window.location.href = link;
+      };
+    })
+    .catch((error) => {
+      console.error('Gagal aktivasi:', error);
+      setStatus('error', '❌ Gagal menyimpan: ' + error.message);
+      activateBtn.disabled = false;
+      activateBtn.textContent = '✅ Aktivasi Kartu';
+      showElement(retryBtn);
+    });
+  }
+
+  // ---------- EVENT LISTENERS ----------
+  activateBtn.addEventListener('click', activateCard);
+
+  googleLinkInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      activateCard();
+    }
+  });
+
+  retryBtn.addEventListener('click', () => {
+    checkCard();
+  });
+
+  // ---------- JALANKAN SAAT HALAMAN DIMUAT ----------
+  document.addEventListener('DOMContentLoaded', checkCard);
+</script>
+</body>
+</html>

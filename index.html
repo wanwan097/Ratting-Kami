@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Admin - Rating Kartu</title>
+
+  <!-- Firebase SDK (CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f5f7fb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 {
+      font-size: 26px;
+      color: #1a2b4a;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .subtitle {
+      color: #6b7a8f;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+    }
+    .btn-primary {
+      background: #2a6df4;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1a5bd4;
+    }
+    .btn-success {
+      background: #22b573;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #1a9a62;
+    }
+    .btn-warning {
+      background: #f4a62a;
+      color: white;
+    }
+    .btn-warning:hover {
+      background: #d9921e;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #d0d7e2;
+      color: #3d4a5c;
+    }
+    .btn-outline:hover {
+      background: #f0f2f5;
+    }
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    .btn-logout {
+      background: #e74c3c;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-logout:hover {
+      background: #c0392b;
+    }
+
+    /* Login */
+    #loginScreen {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 40px 30px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    #loginScreen h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #1a2b4a;
+    }
+    #loginScreen input {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border: 1px solid #d0d7e2;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+    #loginScreen .btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .error-msg {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    /* Tabel */
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      background: #f0f4fa;
+      color: #1a2b4a;
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eaeef3;
+      vertical-align: middle;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-active {
+      background: #d4edda;
+      color: #155724;
+    }
+    .badge-inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .badge-registered {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .link-preview {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      color: #2a6df4;
+      text-decoration: none;
+    }
+    .link-preview:hover {
+      text-decoration: underline;
+    }
+    .action-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7a8f;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      padding: 30px 35px;
+      border-radius: 20px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal h3 {
+      margin-bottom: 15px;
+      color: #1a2b4a;
+    }
+    .modal input {
+      width: 100%;
+      padding: 10px 14px;
+      margin: 8px 0 15px;
+      border: 1px solid #d0d7e2;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .modal .btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 15px; }
+      th, td { font-size: 12px; padding: 8px 6px; }
+      .action-group { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" id="app">
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen">
+    <h2>🔐 Admin Login</h2>
+    <p style="text-align:center; color:#6b7a8f; font-size:14px;">Masuk untuk kelola kartu rating</p>
+    <input type="email" id="emailInput" placeholder="Email" />
+    <input type="password" id="passwordInput" placeholder="Password" />
+    <button class="btn btn-primary" id="loginBtn">Login</button>
+    <div id="loginError" class="error-msg"></div>
+  </div>
+
+  <!-- DASHBOARD (hanya muncul setelah login) -->
+  <div id="dashboardScreen" style="display:none;">
+    <h1>
+      <span>📋 Kelola Kartu</span>
+      <button class="btn-logout" id="logoutBtn">Keluar</button>
+    </h1>
+    <div class="subtitle">Total kartu: <span id="totalCards">0</span> | Teraktivasi: <span id="activeCards">0</span></div>
+
+    <div style="margin-bottom: 18px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <button class="btn btn-primary" id="addCardBtn">+ Tambah Kartu</button>
+      <button class="btn btn-outline" id="refreshBtn">↻ Refresh</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Link Google</th>
+            <th>URL Aktivasi</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="cardsTableBody">
+          <tr><td colspan="5" class="empty-state">Belum ada data. Tambahkan kartu pertama!</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH / EDIT -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3 id="modalTitle">Tambah Kartu</h3>
+      <label>ID Kartu (contoh: 001, 002, ...)</label>
+      <input type="text" id="modalCardId" placeholder="Masukkan ID unik" />
+      <label>Link Google Maps (kosongkan jika belum)</label>
+      <input type="text" id="modalLink" placeholder="https://maps.google.com/..." />
+      <div class="btn-group">
+        <button class="btn btn-outline" id="modalCancelBtn">Batal</button>
+        <button class="btn btn-primary" id="modalSaveBtn">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+  // ---------- KONFIGURASI FIREBASE ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyAgC4kkAocVrn4A2HcFiBQ8zCPcg47VOMg",
+    authDomain: "review-ratting-shop.firebaseapp.com",
+    projectId: "review-ratting-shop",
+    storageBucket: "review-ratting-shop.firebasestorage.app",
+    messagingSenderId: "190983728666",
+    appId: "1:190983728666:web:4f070250626f322145eba3",
+    measurementId: "G-5GYP236RS5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ---------- DOM ELEMENTS ----------
+  const loginScreen = document.getElementById('loginScreen');
+  const dashboardScreen = document.getElementById('dashboardScreen');
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const cardsBody = document.getElementById('cardsTableBody');
+  const totalCardsSpan = document.getElementById('totalCards');
+  const activeCardsSpan = document.getElementById('activeCards');
+  const addCardBtn = document.getElementById('addCardBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalCardId = document.getElementById('modalCardId');
+  const modalLink = document.getElementById('modalLink');
+  const modalCancelBtn = document.getElementById('modalCancelBtn');
+  const modalSaveBtn = document.getElementById('modalSaveBtn');
+
+  let currentEditId = null; // untuk edit, simpan ID yang sedang diedit
+
+  // ---------- FUNGSI AUTH ----------
+  loginBtn.addEventListener('click', () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!email || !password) {
+      loginError.textContent = 'Email dan password wajib diisi.';
+      return;
+    }
+    loginError.textContent = '';
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        // login berhasil, otomatis pindah ke dashboard via onAuthStateChanged
+      })
+      .catch((err) => {
+        loginError.textContent = err.message;
+      });
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    auth.signOut();
+  });
+
+  // ---------- AUTH STATE ----------
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      loginScreen.style.display = 'none';
+      dashboardScreen.style.display = 'block';
+      loadCards();
+    } else {
+      loginScreen.style.display = 'block';
+      dashboardScreen.style.display = 'none';
+    }
+  });
+
+  // ---------- FUNGSI LOAD DATA ----------
+  function loadCards() {
+    db.collection('cards').orderBy('id').get()
+      .then((snapshot) => {
+        const cards = [];
+        snapshot.forEach((doc) => {
+          cards.push({ id: doc.id, ...doc.data() });
+        });
+        renderTable(cards);
+        updateStats(cards);
+      })
+      .catch((err) => {
+        console.error('Gagal load data:', err);
+        cardsBody.innerHTML = `<tr><td colspan="5" class="empty-state">Error: ${err.message}</td></tr>`;
+      });
+  }
+
+  function renderTable(cards) {
+    if (cards.length === 0) {
+      cardsBody.innerHTML = `<tr><td colspan="5" class="empty-state">Belum ada kartu. Klik "Tambah Kartu".</td></tr>`;
+      return;
+    }
+
+    let html = '';
+    cards.forEach((card) => {
+      const status = card.activated ? 'Aktif' : (card.registered ? 'Terdaftar' : 'Belum terdaftar');
+      const statusClass = card.activated ? 'badge-active' : (card.registered ? 'badge-registered' : 'badge-inactive');
+      const link = card.googleLink || '-';
+      const linkDisplay = card.googleLink ? `<a href="${card.googleLink}" target="_blank" class="link-preview">${card.googleLink}</a>` : '-';
+
+      // URL aktivasi (untuk QR & NFC)
+      const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/') + 'activate.html'; // sesuaikan
+      const activationUrl = `${baseUrl}?id=${card.id}`;
+
+      html += `
+        <tr>
+          <td><strong>${card.id}</strong></td>
+          <td><span class="status-badge ${statusClass}">${status}</span></td>
+          <td>${linkDisplay}</td>
+          <td style="font-size:12px; word-break:break-all;">
+            <a href="${activationUrl}" target="_blank">${activationUrl}</a>
+          </td>
+          <td>
+            <div class="action-group">
+              <button class="btn btn-sm btn-success" onclick="editCard('${card.id}')">Edit Link</button>
+              ${!card.activated ? `<button class="btn btn-sm btn-primary" onclick="activateCard('${card.id}')">Aktivasi</button>` : ''}
+              <button class="btn btn-sm btn-warning" onclick="resetCard('${card.id}')">Reset</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteCard('${card.id}')">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    cardsBody.innerHTML = html;
+  }
+
+  function updateStats(cards) {
+    totalCardsSpan.textContent = cards.length;
+    const active = cards.filter(c => c.activated === true).length;
+    activeCardsSpan.textContent = active;
+  }
+
+  // ---------- FUNGSI CRUD (dipanggil dari onclick) ----------
+  window.editCard = function(id) {
+    // Ambil data dari Firestore
+    db.collection('cards').doc(id).get()
+      .then((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          currentEditId = id;
+          modalTitle.textContent = `Edit Kartu ${id}`;
+          modalCardId.value = id;
+          modalCardId.disabled = true; // ID tidak boleh diubah
+          modalLink.value = data.googleLink || '';
+          modalOverlay.classList.add('active');
+        }
+      })
+      .catch((err) => alert('Gagal ambil data: ' + err.message));
+  };
+
+  window.activateCard = function(id) {
+    if (confirm(`Aktivasi kartu ${id}? (pastikan link Google Maps sudah diisi)`)) {
+      db.collection('cards').doc(id).update({
+        activated: true
+      })
+      .then(() => {
+        alert('Kartu berhasil diaktivasi!');
+        loadCards();
+      })
+      .catch((err) => alert('Gagal aktivasi: ' + err.message));
+    }
+  };
+
+  window.resetCard = function(id) {
+    if (confirm(`Reset kartu ${id}? Link akan dihapus dan status nonaktif.`)) {
+      db.collection('cards').doc(id).update({
+        googleLink: '',
+        activated: false,
+        registered: true // tetap terdaftar
+      })
+      .then(() => {
+        alert('Kartu di-reset.');
+        loadCards();
+      })
+      .catch((err) => alert('Gagal reset: ' + err.message));
+    }
+  };
+
+  window.deleteCard = function(id) {
+    if (confirm(`Hapus permanen kartu ${id}?`)) {
+      db.collection('cards').doc(id).delete()
+        .then(() => {
+          alert('Kartu dihapus.');
+          loadCards();
+        })
+        .catch((err) => alert('Gagal hapus: ' + err.message));
+    }
+  };
+
+  // ---------- MODAL TAMBAH KARTU ----------
+  addCardBtn.addEventListener('click', () => {
+    currentEditId = null;
+    modalTitle.textContent = 'Tambah Kartu Baru';
+    modalCardId.value = '';
+    modalCardId.disabled = false;
+    modalLink.value = '';
+    modalOverlay.classList.add('active');
+  });
+
+  modalCancelBtn.addEventListener('click', () => {
+    modalOverlay.classList.remove('active');
+    currentEditId = null;
+    modalCardId.disabled = false;
+  });
+
+  modalSaveBtn.addEventListener('click', () => {
+    const id = modalCardId.value.trim();
+    const link = modalLink.value.trim();
+
+    if (!id) {
+      alert('ID kartu wajib diisi.');
+      return;
+    }
+
+    const cardData = {
+      id: id,
+      registered: true,
+      activated: link ? true : false,
+      googleLink: link || ''
+    };
+
+    if (currentEditId) {
+      // EDIT
+      db.collection('cards').doc(currentEditId).update({
+        googleLink: link,
+        activated: link ? true : false
+      })
+      .then(() => {
+        alert('Kartu diperbarui.');
+        modalOverlay.classList.remove('active');
+        currentEditId = null;
+        modalCardId.disabled = false;
+        loadCards();
+      })
+      .catch((err) => alert('Gagal update: ' + err.message));
+    } else {
+      // TAMBAH BARU
+      db.collection('cards').doc(id).set(cardData)
+        .then(() => {
+          alert('Kartu berhasil ditambahkan!');
+          modalOverlay.classList.remove('active');
+          modalCardId.disabled = false;
+          loadCards();
+        })
+        .catch((err) => alert('Gagal tambah: ' + err.message));
+    }
+  });
+
+  // ---------- REFRESH ----------
+  refreshBtn.addEventListener('click', loadCards);
+
+  // ---------- TUTUP MODAL DENGAN KLIK LUAR ----------
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      modalOverlay.classList.remove('active');
+      currentEditId = null;
+      modalCardId.disabled = false;
+    }
+  });
+
+  // Siapkan collection "cards" di Firestore jika belum ada
+  // (tidak perlu, karena akan dibuat otomatis saat tambah data)
+  console.log('Dashboard siap!');
+</script>
+
+</body>
+</html>
